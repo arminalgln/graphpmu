@@ -1,0 +1,44 @@
+<Project name="IEEE34">
+  <hierarchy />
+  <messagelist>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Generating network and source code 'E:\github\graphpmu\pscadmodel\IEEE34.gf42\Main.f'.]]></message>
+    <message status="normal" label="build">
+      <User scope="IEEE34" name="PMU_a" status="normal" link="398030629" /><![CDATA[Generating network and source code 'E:\github\graphpmu\pscadmodel\IEEE34.gf42\PMU_a.f'.]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Generating 'E:\github\graphpmu\pscadmodel\IEEE34.gf42\IEEE34.map'.]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Time for Compile: 766ms  Make: 125ms]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Solve Time = 47ms]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Will execute: call C:\Program Files (x86)\GFortran\4.2.1\bin\gf42vars.bat]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Will execute: make -f IEEE34.mak]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Will execute: E:\github\graphpmu\pscadmodel\IEEE34.gf42\\IEEE34.bat]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Creating EMTDC executable...]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[E:\github\graphpmu\pscadmodel\IEEE34.gf42>call C:\PROGRA~2\GFortran\428484~1.1\bin\gf42vars.bat ]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Compiling generated source 'Main.f' into object code.]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Compiling generated source 'PMU_a.f' into object code.]]></message>
+    <message status="normal" label="build" scope="IEEE34"><![CDATA[Linking object code and libraries into binary 'IEEE34.exe']]></message>
+  </messagelist>
+  <emt>
+    <netlist name="Station" call_count="1" ss_count="0">
+      <signals>
+        <signal name="GND" dim="1" ss_id="0" node_map_count="1" local_storage_index="0">
+          <sg_points />
+          <node_number global="0" sg_local="0" sg_callindex="0" />
+        </signal>
+      </signals>
+      <components>
+        <component id="1577372833" />
+      </components>
+    </netlist>
+  </emt>
+  <views>
+    <view name="Main" zoomlevel="4" scrollx="961" scrolly="504" />
+    <view name="PMU_a" zoomlevel="4" scrollx="0" scrolly="0" />
+    <view name="PMU_b" zoomlevel="7" scrollx="0" scrolly="0" />
+  </views>
+  <catalog>
+    <group name="(No Label)">
+      <item name="unbalanced_shortline" />
+      <item name="fload3" />
+      <item name="update_ag" />
+    </group>
+  </catalog>
+</Project>

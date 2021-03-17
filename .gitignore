@@ -50,6 +50,9 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+pscadmodel/IEEE34_no_wind_main.gf42
+pscadmodel/IEEE34.gf42
+
 
 # Translations
 *.mo
