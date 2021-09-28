@@ -7,10 +7,10 @@ import pandas as pd
 from dgl import save_graphs, load_graphs
 from dgl.data.utils import makedirs, save_info, load_info
 
-features = np.load('data/features.npy')
-labels = np.load('data/labels.npy')
-data = np.load('data/all_event_data.npy')
-per_unit = np.load('data/all_per_unit.npy')
+# features = np.load('data/features.npy')
+# labels = np.load('data/labels.npy')
+# data = np.load('data/all_event_data.npy')
+# per_unit = np.load('data/all_per_unit.npy')
 
 
 class PmuDataset(DGLDataset):

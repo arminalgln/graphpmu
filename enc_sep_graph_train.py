@@ -61,7 +61,7 @@ pmu_number = int(per_unit.shape[-1] / feature_number)
 
 # separate the pmu data
 new_labels = np.repeat(labels, pmu_number, axis=0)
-for indx, data  in enumerate(np.split(per_unit, pmu_number, axis =-1)):
+for indx, data in enumerate(np.split(per_unit, pmu_number, axis=-1)):
     if indx == 0:
         new_per_unit = data
     else:
