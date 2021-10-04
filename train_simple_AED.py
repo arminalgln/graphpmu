@@ -113,15 +113,15 @@ def show_detail(data, pmu, type):
     ax1.plot(data[5:,pmu * k + 3])
     ax2.plot(data[5:,pmu * k + 6])
 
-  ax0.set_xlabel('time [s]')
+  ax0.set_xlabel('timesteps')
   ax0.set_ylabel('voltage magnitude')
   ax0.legend(['v1', 'v2', 'v3'])
 
-  ax1.set_xlabel('freq')
+  ax1.set_xlabel('timesteps')
   ax1.set_ylabel('current magnitude')
   ax1.legend(['i1', 'i2', 'i3'])
 
-  ax2.set_xlabel('time [s]')
+  ax2.set_xlabel('timesteps')
   ax2.set_ylabel('angle diff')
   ax2.legend(['t1', 't2', 't3'])
 
@@ -133,7 +133,7 @@ def show_detail(data, pmu, type):
 #%%
 
 pmu = 1
-for ev in [102,483]:
+for ev in range(5):
 # ev = 100
   data = per_unit[ev]
   data = torch.from_numpy(data).to(device).reshape(1, data.shape[0], data.shape[1])
@@ -151,21 +151,22 @@ for ev in [102,483]:
 
 #%%
 #load the trained model
-model_path = 'models/AED/806_824_836_846_separate'
+model_path = 'models/AED/806_824_836_846_stacked'
 model = torch.load(model_path)
 model.eval()
 #%%
 labels = pd.DataFrame({'labels': labels})
 labels = labels['labels'].astype('category').cat.codes.to_numpy()
-
+#%%
 all_data = torch.from_numpy(per_unit).to(device)
 # get the latent variables
-
+#%%
 selected_latent = model.encoder(all_data[train_selector[2387:3580]]).cpu().detach().numpy()
 selected_labels = labels[train_selector[2387:3580]]
 #%%
 
-
+#clustering results based on different clustering models
+#but the representation learning of the latent space is the important part not the clustering model
 def all_clustering_models(latent, labels, cluster_num):
   from sklearn import metrics
   from sklearn.mixture import GaussianMixture
@@ -196,9 +197,30 @@ def all_clustering_models(latent, labels, cluster_num):
 cluster_num = 9
 all_clustering_models(selected_latent, selected_labels, cluster_num)
 #%%
+#show TSNE of the clusters based on the selected latent
 from sklearn.manifold import TSNE
 X_embedded = TSNE(n_components=2).fit_transform(selected_latent)
+from matplotlib.colors import ListedColormap
 #%%
-plt.scatter(X_embedded[:,0], X_embedded[:,1],c=selected_labels)
-plt.legend(selected_labels)
+pad = 5
+xyticks_num = 10
+unique_labels = np.unique(selected_labels)
+clrs = ['r','g','b','c','m','y','k','orange','lime']
+values = [unique_labels.tolist().index(i) for i in selected_labels]
+plt.style.use('default')
+matplotlib.rcParams['figure.figsize'] = 20, 12
+# colors = ListedColormap(['r','b','g'])
+scatter = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=values, s=100, cmap='tab10')
+plt.title('TSNE for the embeddings of stacked AED with DEC')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.xlim([np.min(X_embedded[:, 0])-pad,np.max(X_embedded[:, 0]) + pad])
+plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad])
+plt.xticks(np.arange(np.min(X_embedded[:, 0])-pad, np.max(X_embedded[:, 0]) + pad, 5))
+
+plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 5))
+plt.grid()
+plt.legend(handles=scatter.legend_elements()[0], labels=unique_labels.tolist(),scatterpoints=10, fontsize=20)
+plt.tight_layout()
+plt.savefig('figures/tsne_stacked_AED_DEC.png', dpi=300)
 plt.show()

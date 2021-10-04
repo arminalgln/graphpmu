@@ -47,7 +47,7 @@ class Encoder(nn.Module):
     x = hidden_n.reshape(h_size[1], h_size[2])
     x = F.leaky_relu(x)
     x = self.dense1(x)
-    x = self.batchnorm(x)
+    # x = self.batchnorm(x) #some models have this some not
 
     return F.leaky_relu(x)
 
