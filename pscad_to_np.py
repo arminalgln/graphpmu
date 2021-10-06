@@ -6,7 +6,7 @@ import os
 from scipy.interpolate import InterpolatedUnivariateSpline
 #%%
 all_pmus = pd.read_csv('data/buses.csv')
-selected_pmus = ['806', '824', '854', '834', '836', '846']
+selected_pmus = ['806', '824', '836', '846']
 
 
 def data_arrangement(path_to_events, selected_pmus):
@@ -48,7 +48,7 @@ def data_arrangement(path_to_events, selected_pmus):
 
                 per_unit_data['vm' + phase + pmu] = temp_data['vm' + phase + pmu]/base_voltage
                 per_unit_data['im' + phase + pmu] = temp_data['im' + phase + pmu]/base_current
-                per_unit_data['t' + phase + pmu] = temp_data['t' + phase + pmu]/base_phase
+                per_unit_data['t' + phase + pmu] = np.cos(temp_data['t' + phase + pmu] * np.pi / 180)
 
                 del temp_data['vph' + phase + pmu]
                 del temp_data['iph' + phase + pmu]
@@ -154,8 +154,8 @@ for i, ev in enumerate(per_unit):
     print(per_unit.shape, labels.shape)
 # whole_agc.to_pickle('data/whole_agc.pkl')
 #%%
-np.save('data/aug_labels' + ''.join(['_' + i for i in selected_pmus]), labels)
-np.save('data/aug_all_per_unit' + ''.join(['_' + i for i in selected_pmus]), per_unit)
+np.save('data/new_aug_labels' + ''.join(['_' + i for i in selected_pmus]), labels)
+np.save('data/new_aug_all_per_unit' + ''.join(['_' + i for i in selected_pmus]), per_unit)
 
 #%%
 np.save('data/features', info['features'])
