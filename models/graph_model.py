@@ -4,45 +4,65 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl
 from dgl.nn import GraphConv
-from dgl.nn import GATConv
-
-import torch.autograd.function as Function
+from models.discriminator import Discriminator
+from models.losses import global_loss_
 
 
 class GraphEncoder(nn.Module):
-  def __init__(self, in_feats, h1_feats, last_space_feature):
-    super(GraphEncoder, self).__init__()
-    # self.conv1 = GATConv(in_feats, h1_feats, 1)
-    self.conv1 = GraphConv(in_feats, h1_feats)
-    self.conv2 = GraphConv(h1_feats, last_space_feature)
-    # self.conv2 = GATConv(h1_feats, last_space_feature, 1)
+    def __init__(self, node_nums, in_feats, h1_feats, last_space_feature):
+        super(GraphEncoder, self).__init__()
+        # self.conv1 = GATConv(in_feats, h1_feats, 1)
+        self.node_nums = node_nums
+        self.in_feats = in_feats
+        self.last_space_feature = last_space_feature
+        self.conv1 = GraphConv(in_feats, h1_feats)
+        self.conv2 = GraphConv(h1_feats, last_space_feature)
+        # self.conv2 = GATConv(h1_feats, last_space_feature, 1)
+        self.init_emb()
 
-  def forward(self, g, in_feat):
+    def init_emb(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.fill_(0.0)
 
-    h = self.conv1(g, in_feat)
-    h = F.leaky_relu(h)
-    h1 = h
-    h = self.conv2(g, h)
-    h = F.leaky_relu(h)
-    h2 = h
-
-    return h1, h2, torch.mean(h2,axis=0)
+    def forward(self, g):
+        batch_size = int(g.num_nodes() / self.node_nums)
+        h = self.conv1(g, self.in_feat)
+        h = F.leaky_relu(h)
+        h1 = h
+        h = self.conv2(g, h)
+        h = F.leaky_relu(h)
+        h2 = h
+        H = torch.reshape(h2, (batch_size, self.node_nums, self.last_space_feature))
+        return torch.mean(H, axis=1)
 
 #%%
-import pickle
-with open('data/positive_graphs.pkl', 'rb') as handle:
-  pos_graphs = pickle.load(handle)
-#%%
-import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-graph = dgl.batch(pos_graphs[1:10])
-model = GraphEncoder(32, 64, 8).to(device)
-h1, h2, H = model(graph, graph.ndata['features'])
-import matplotlib.pyplot as plt
-a=h1.detach().cpu().numpy()
-b=h2.detach().cpu().numpy()
-plt.imshow(a)
-plt.show()
-plt.imshow(b)
-plt.show()
+class graphpmu(nn.Module):
+    def __init__(self, encoder, discriminator, node_nums, in_feats, h1_feats, last_space_feature, D_h1, D_h2, measure):
+        super(graphpmu, self).__init__()
+        self.node_nums = node_nums
+        self.in_feats = in_feats
+        self.h1_feats = h1_feats
+        self.last_space_feature = last_space_feature
+        self.D_h1 = D_h1
+        self.D_h2 = D_h2
+        self.measure = measure
+        self.encoder = encoder(node_nums, in_feats, h1_feats, last_space_feature)
+        self.discriminator = discriminator(last_space_feature, D_h1, D_h2)
+        self.init_emb()
+
+    def init_emb(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.fill_(0.0)
+
+    def forward(self, g):
+        H = self.encoder(g)
+        y = self.discriminator(H)
+        loss = global_loss_(y, self.measure)
+
+        return loss
