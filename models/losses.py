@@ -137,13 +137,12 @@ def global_loss_(g_enc, measure):
 
     pos_mask = torch.zeros(num_graphs).cuda()
     pos_mask[0:pos_graphs_num] = 1
-    neg_mask = torch.ones(num_graphs).cuda()
-    neg_mask[neg_graphs_num:] = 0
+    neg_mask = torch.zeros(num_graphs).cuda()
+    neg_mask[neg_graphs_num:] = 1
 
-
-    E_pos = get_positive_expectation(g_enc * pos_mask, measure, average=False).sum()
+    E_pos = get_positive_expectation(g_enc[0:pos_graphs_num], measure, average=False).sum()
     E_pos = E_pos / pos_graphs_num
-    E_neg = get_negative_expectation(g_enc * neg_mask, measure, average=False).sum()
+    E_neg = get_negative_expectation(g_enc[neg_graphs_num:], measure, average=False).sum()
     E_neg = E_neg / neg_graphs_num
 
-    return E_neg - E_pos
+    return E_neg - E_pos + 40
