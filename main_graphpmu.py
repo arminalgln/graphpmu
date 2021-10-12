@@ -1,7 +1,7 @@
 import torch
 import pickle
 import numpy as np
-from models.graph_model import GraphPMU, GraphEncoder
+from models.graph_model import GraphPMU, GraphEncoder, GraphEncoderLocGlob
 from models.discriminator import Discriminator
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -13,33 +13,35 @@ import copy
 from models.losses import global_loss_, get_positive_expectation, get_negative_expectation
 import torch.nn as nn
 import pandas as pd
-#%%
+
 
 with open('data/positive_graphs.pkl', 'rb') as handle:
   pos_graphs = pickle.load(handle)
 
 with open('data/negative_graphs.pkl', 'rb') as handle:
   neg_graphs = pickle.load(handle)
-#%%
+
 #initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 g_encoder = GraphEncoder
+# g_encoder = GraphEncoderLocGlob
 disc = Discriminator
 node_nums = pos_graphs[0].num_nodes()
-[in_feats, h1_feats, last_space_feature] = [pos_graphs[0].ndata['features'].shape[-1], 64, 8]
-[D_h1, D_h2] = [16, 32]
-measure = 'JSD'#['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1']
+[in_feats, h1_feats, last_space_feature] = [pos_graphs[0].ndata['features'].shape[-1], 64, 16]
+[D_h1, D_h2] = [1, 1]
+measure = 'RKL'#['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1', 'JSMI']
 graphpmu = GraphPMU(g_encoder, disc, node_nums, in_feats, h1_feats, last_space_feature, D_h1, D_h2, measure, device)
 
 #make positive and negative batches
 num_samples = len(pos_graphs)
 
 num_train = int(num_samples * 0.9)
+np.random.seed(0)
 train_selector = np.random.choice(num_samples, num_train, replace=False)
 test_selector = np.setdiff1d(np.arange(num_samples), train_selector)
 
-train_index = np.random.choice(train_selector.shape[0], 10000, replace=False)
-test_index = np.random.choice(test_selector.shape[0], 100, replace=False)
+train_index = np.random.choice(train_selector.shape[0], 20000, replace=False)
+test_index = np.random.choice(test_selector.shape[0], 1000, replace=False)
 
 train_selector = train_selector[train_index]
 test_selector = test_selector[test_index]
@@ -59,13 +61,12 @@ neg_train_dataloader = GraphDataLoader(
 neg_test_dataloader = GraphDataLoader(
     neg_graphs, sampler=test_sampler, batch_size=b_size, drop_last=False)
 
-#%%
 def train_graphpmu(graphpmu, pos_train_dataloader, neg_train_dataloader,
                    pos_test_dataloader, neg_test_dataloader, epochs_num):
     #initialization for training
     graphpmu_optimizer = torch.optim.Adam(graphpmu.parameters(), lr=1e-3)#, weight_decay=1e-4
     criteria = global_loss_
-    BCE = nn.BCELoss()
+    # BCE = nn.BCELoss()
     history = dict(train=[], val=[])
     best_model_wts = copy.deepcopy(graphpmu.state_dict())
     best_loss = 10000.0
@@ -82,9 +83,9 @@ def train_graphpmu(graphpmu, pos_train_dataloader, neg_train_dataloader,
         for pos_batch in pos_iter:#iter on train batches
             pos_neg_graphs = dgl.batch([pos_batch, next(neg_iter)]) #concat pos and neg graphs
             pred = graphpmu(pos_neg_graphs)
-            target = torch.cat((torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
-            loss = BCE(pred.ravel(), target)
-            # loss = criteria(pred, measure)
+            # target = torch.cat((torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
+            # loss = BCE(pred.ravel(), target)
+            loss = criteria(pred, measure)
             # print(loss)
             graphpmu_optimizer.zero_grad()
             loss.backward()
@@ -99,10 +100,10 @@ def train_graphpmu(graphpmu, pos_train_dataloader, neg_train_dataloader,
             for pos_batch in pos_iter:  # iter on train batches
                 pos_neg_graphs = dgl.batch([pos_batch, next(neg_iter)])  # concat pos and neg graphs
                 pred = graphpmu(pos_neg_graphs)
-                target = torch.cat(
-                    (torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
-                loss = BCE(pred.ravel(), target)
-                # loss = criteria(pred, measure)
+                # target = torch.cat(
+                    # (torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
+                # loss = BCE(pred.ravel(), target)
+                loss = criteria(pred, measure)
                 validation_losses.append(loss.item())
                     # print(loss.item())
 
@@ -120,19 +121,27 @@ def train_graphpmu(graphpmu, pos_train_dataloader, neg_train_dataloader,
 
 
 gpmodel = train_graphpmu(graphpmu, pos_train_dataloader, neg_train_dataloader,
-                         pos_test_dataloader, neg_test_dataloader, epochs_num=100)
-#%%
+                         pos_test_dataloader, neg_test_dataloader, epochs_num=20)
+
 from sklearn.metrics import accuracy_score
 #discriminator evaluation
 def get_accuracy(y_true, y_prob):
-    y_prob = y_prob > 0.5
-    return (y_true == y_prob).sum().item() / y_true.size(0)
+    cls = []
+    count = 0
+    for c, i in enumerate(y_prob):
+        if i > 0.5:
+            cls.append(1)
+        else:
+            cls.append(0)
+        if cls[c] == y_true[c]:
+            count += 1
+    return count/len(cls)
 with torch.no_grad():
-    pos_iter = iter(pos_train_dataloader)
-    neg_iter = iter(neg_train_dataloader)
+    pos_iter = iter(pos_test_dataloader)
+    neg_iter = iter(neg_test_dataloader)
     count = 0
     for pos_batch in pos_iter:  # iter on train batches
-        print(count)
+        # print(count)
         count += 1
         pos_neg_graphs = dgl.batch([pos_batch, next(neg_iter)])  # concat pos and neg graphs
         g_enc = gpmodel.encoder(pos_neg_graphs)
@@ -140,13 +149,13 @@ with torch.no_grad():
 
 
         pred = gpmodel(pos_neg_graphs)
-        y = torch.cat((torch.ones(pos_batch.batch_size), torch.zeros(pos_batch.batch_size)))
+        # y = torch.cat((torch.ones(pos_batch.batch_size), torch.zeros(pos_batch.batch_size)))
         target = torch.cat(
             (torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
         # loss = BCE(pred, target)
         print(get_accuracy(target, pred))
 
-#%%
+
 
 # clustering evaluation
 labels = np.load('data/new_aug_labels_806_824_836_846.npy')
@@ -199,7 +208,6 @@ cluster_num = 9
 all_clustering_models(all_latents, selected_labels, cluster_num)
 # all_clustering_models(all_z, selected_labels, cluster_num)
 
-#%%
 from sklearn.manifold import TSNE
 X_embedded = TSNE(n_components=2).fit_transform(all_latents)
 import matplotlib.pyplot as plt
@@ -219,4 +227,40 @@ ax.legend()
 plt.show()
 
 
+#%%
+pg = dgl.unbatch(pos_neg_graphs)[0]
+ng = dgl.unbatch(pos_neg_graphs)[-1]
+
+penc = graphpmu.encoder(pg)
+nenc = graphpmu.encoder(ng)
+
+prep = graphpmu.discriminator(penc)
+pren = graphpmu.discriminator(nenc)
+
+png = dgl.batch([pg, ng])
+
+gparam = graphpmu.parameters()
+graphpmu_optimizer = torch.optim.Adam(graphpmu.parameters(), lr=1e-3)  # , weight_decay=1e-4
+criteria = global_loss_
+
+for epoch in range(5):
+    # training mode
+    graphpmu = graphpmu.train()
+    graphpmu_optimizer.zero_grad()
+    train_losses = []
+    gparam = next(graphpmu.discriminator.parameters())[0]
+    print('before: ', gparam)
+    pred = graphpmu(png)
+    # target = torch.cat((torch.ones(pos_batch.batch_size, device=device), torch.zeros(pos_batch.batch_size, device=device)))
+    # loss = BCE(pred.ravel(), target)
+    loss = criteria(pred, measure)
+    # print(loss)
+    graphpmu_optimizer.zero_grad()
+    loss.backward()
+    print()
+    train_losses.append(loss.item())
+    graphpmu_optimizer.step()
+    gparam = next(graphpmu.discriminator.parameters())[0]
+    print('after: ', gparam)
+    print('-----------------------')
 
