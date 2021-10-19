@@ -104,7 +104,7 @@ def get_negative_expectation(q_samples, measure, average=True):
 
 
 
-def local_global_loss_(l_enc, g_enc, edge_index, batch, measure):
+def local_global_loss_(pred, labels, measure):
     '''
     Args:
         l: Local feature map.
@@ -114,21 +114,16 @@ def local_global_loss_(l_enc, g_enc, edge_index, batch, measure):
     Returns:
         torch.Tensor: Loss.
     '''
-    num_graphs = g_enc.shape[0]
-    num_nodes = l_enc.shape[0]
+    positives = pred.reshape(pred.shape[0])*labels
+    negatives = pred.reshape(pred.shape[0])*(1-labels)
+    pos_nums = torch.sum(labels)
+    neg_nums = labels.shape[0] - pos_nums
 
-    pos_mask = torch.zeros((num_nodes, num_graphs)).cuda()
-    neg_mask = torch.ones((num_nodes, num_graphs)).cuda()
-    for nodeidx, graphidx in enumerate(batch):
-        pos_mask[nodeidx][graphidx] = 1.
-        neg_mask[nodeidx][graphidx] = 0.
 
-    res = torch.mm(l_enc, g_enc.t())
-
-    E_pos = get_positive_expectation(res * pos_mask, measure, average=False).sum()
-    E_pos = E_pos / num_nodes
-    E_neg = get_negative_expectation(res * neg_mask, measure, average=False).sum()
-    E_neg = E_neg / (num_nodes * (num_graphs - 1))
+    E_pos = get_positive_expectation(positives, measure, average=False).sum()
+    E_pos = E_pos / pos_nums
+    E_neg = get_negative_expectation(negatives, measure, average=False).sum()
+    E_neg = E_neg / neg_nums
 
     return E_neg - E_pos
 
@@ -156,3 +151,19 @@ def global_loss_(g_enc, measure):
     E_neg = E_neg / neg_graphs_num
 
     return E_neg - E_pos
+
+
+# #%%
+# for measure in ['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1', 'JSMI', 'BCE']:
+#     best = 1000
+#     pbest = 0
+#     qbest = 0
+#     for i in range(101):
+#         for j in range(101):
+#             en = get_negative_expectation(torch.tensor([i/100]), measure)
+#             ep = get_positive_expectation(torch.tensor([j/100]), measure)
+#             if en - ep < best:
+#                 best = en - ep
+#                 pbest = j/100,
+#                 qbest = i/100
+#     print('measure is : ', measure, 'which loss is: ', best ,' with the minimum loss when p = ', pbest, ' and q = ', qbest)

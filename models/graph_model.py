@@ -44,6 +44,35 @@ class GraphEncoder(nn.Module):
         # g.ndata['H'] = H
         return H
 
+class GraphPMU(nn.Module):
+    def __init__(self, encoder, discriminator, node_nums, in_feats, h1_feats, last_space_feature, D_h1, D_h2, device):
+        super(GraphPMU, self).__init__()
+        self.node_nums = node_nums
+        self.in_feats = in_feats
+        self.h1_feats = h1_feats
+        self.last_space_feature = last_space_feature
+        self.D_h1 = D_h1
+        self.D_h2 = D_h2
+        # self.measure = measure
+        self.device = device
+        self.encoder = encoder(node_nums, in_feats, h1_feats, last_space_feature).to(device)
+        # self.discriminator = discriminator(last_space_feature, D_h1, D_h2).to(device)#if simple encoder
+        self.discriminator = discriminator(last_space_feature + h1_feats, D_h1, D_h2).to(device)#if locglob encoder
+        self.init_emb()
+
+    def init_emb(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.fill_(0.0)
+
+    def forward(self, g):
+        H = self.encoder(g.to(self.device))
+        y = self.discriminator(H)
+
+        return y
+
 
 
 class GraphEncoderLocGlob(nn.Module):
@@ -83,20 +112,20 @@ class GraphEncoderLocGlob(nn.Module):
         # g.ndata['H'] = H
         return H
 
-class GraphPMU(nn.Module):
-    def __init__(self, encoder, discriminator, node_nums, in_feats, h1_feats, last_space_feature, D_h1, D_h2, measure, device):
-        super(GraphPMU, self).__init__()
+class GraphPMULocalGlobal(nn.Module):
+    def __init__(self, encoder, discriminator, node_nums, in_feats, h1_feats, last_space_feature, D_h1, D_h2, device):
+        super(GraphPMULocalGlobal, self).__init__()
         self.node_nums = node_nums
         self.in_feats = in_feats
         self.h1_feats = h1_feats
         self.last_space_feature = last_space_feature
         self.D_h1 = D_h1
         self.D_h2 = D_h2
-        self.measure = measure
+        # self.measure = measure
         self.device = device
         self.encoder = encoder(node_nums, in_feats, h1_feats, last_space_feature).to(device)
-        self.discriminator = discriminator(last_space_feature, D_h1, D_h2).to(device)#if simple encoder
-        # self.discriminator = discriminator(last_space_feature + h1_feats, D_h1, D_h2).to(device)#if locglob encoder
+        # self.discriminator = discriminator(last_space_feature, D_h1, D_h2).to(device)#if simple encoder
+        self.discriminator = discriminator(2 * (last_space_feature + h1_feats), D_h1, D_h2).to(device)#if locglob encoder
         self.init_emb()
 
     def init_emb(self):
@@ -107,7 +136,7 @@ class GraphPMU(nn.Module):
                     m.bias.data.fill_(0.0)
 
     def forward(self, g):
-        H = self.encoder(g.to(self.device))
+        H = self.encoder(g.to(self.device)) # encoder should be GraphEncoderLocGlob
         y = self.discriminator(H)
 
         return y
