@@ -21,21 +21,21 @@ class Encoder(nn.Module):
       input_size=self.n_features,
       hidden_size=self.rnn1_dim,
       num_layers=1,
-      dropout=0.4,
+      #dropout=0.4,
       batch_first=True  # (batch, seq, feature) as output and (num_layers, batch, hidden_size) for h, c
     )  # (batch, seq, feature)  for input if batch_first is true
     self.rnn2 = nn.LSTM(
       input_size=self.rnn1_dim,
       hidden_size=self.dense1_dim,
       num_layers=1,
-      dropout=0.4,
+      #dropout=0.4,
       batch_first=True
     )
     self.dense1 = nn.Linear(
         in_features=self.dense1_dim,
         out_features=self.embedding_dim
     )
-    self.batchnorm = nn.BatchNorm1d(self.embedding_dim)
+    # self.batchnorm = nn.BatchNorm1d(self.embedding_dim)
 
   def forward(self, x):
     # x.to(self.device)
@@ -49,7 +49,7 @@ class Encoder(nn.Module):
     x = self.dense1(x)
     # x = self.batchnorm(x) #some models have this some not
 
-    return F.leaky_relu(x)
+    return torch.tanh(x)
 
 
 class Decoder(nn.Module):

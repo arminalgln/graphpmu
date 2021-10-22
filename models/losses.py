@@ -104,7 +104,7 @@ def get_negative_expectation(q_samples, measure, average=True):
 
 
 
-def local_global_loss_(pred, labels, measure):
+def local_global_loss_(pred, posidx, negidx, measure):
     '''
     Args:
         l: Local feature map.
@@ -114,10 +114,10 @@ def local_global_loss_(pred, labels, measure):
     Returns:
         torch.Tensor: Loss.
     '''
-    positives = pred.reshape(pred.shape[0])*labels
-    negatives = pred.reshape(pred.shape[0])*(1-labels)
-    pos_nums = torch.sum(labels)
-    neg_nums = labels.shape[0] - pos_nums
+    positives = pred.reshape(pred.shape[0])[posidx.long()]
+    negatives = pred.reshape(pred.shape[0])[negidx.long()]
+    pos_nums = posidx.shape[0]
+    neg_nums = negidx.shape[0]
 
 
     E_pos = get_positive_expectation(positives, measure, average=False).sum()
