@@ -1,8 +1,34 @@
+#with latent data
 import numpy as np
 import pandas as pd
 import pickle
+import torch
 #%%
-# make the complete graph for IEEE 34 bus distribution test system
+
+with open('data/positive_graphs_timeseries.pkl', 'rb') as handle:
+  pos_graphs = pickle.load(handle)
+
+with open('data/negative_graphs_timeseries.pkl', 'rb') as handle:
+  neg_graphs = pickle.load(handle)
+#%%
+for g in pos_graphs:
+    mn = g.ndata['features'].mean(axis=1)
+    maxmin = g.ndata['features'].max(axis=1).values - g.ndata['features'].min(axis=1).values
+    gdata = torch.cat((maxmin, mn), axis=1)
+    g.ndata['latent'] = gdata
+#%%
+for g in neg_graphs:
+    mn = g.ndata['features'].mean(axis=1)
+    maxmin = g.ndata['features'].max(axis=1).values - g.ndata['features'].min(axis=1).values
+    gdata = torch.cat((maxmin, mn), axis=1)
+    g.ndata['latent'] = gdata
+#%%
+pmus = [2, 8, 19, 23]
+selected_latents = []
+for g in pos_graphs:
+    selected_latents.append(torch.ravel(g.ndata['latent'][pmus]).detach().cpu().numpy())
+selected_latents = np.array(selected_latents)
+#%%
 bus_data = pd.read_excel('data/ss.xlsx')
 network = pd.read_excel('data/edges.xlsx')
 # print(bus_data.head())
@@ -32,6 +58,7 @@ whole_data_ss = {}
 temp_value = np.ones((event_numbers, timesteps, feature_num))
 count = 0
 features = bus_data.keys()[2:]
+#%%
 for bus in bus_data['bus']:
     if bus in selected_pmus:
         whole_data_without_ss[bus] = known_data[count]
@@ -58,26 +85,3 @@ with open("data/whole_data_ss.pkl", "wb") as pkl_handle:
 
 with open("data/whole_data_without_ss.pkl", "wb") as pkl_handle:
 	pickle.dump(whole_data_without_ss, pkl_handle)
-#%%
-import torch
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#save the latent for the node data
-node_data = np.load('data/whole_data_ss.pkl', allow_pickle=True)
-model = torch.load('models/AED/806_824_836_846_with_complete_network_just_pmus')
-model.eval()
-
-latents = {}
-split_size = 10
-for bus in node_data:
-    splitted_data = np.array_split(node_data[bus], split_size)
-    for i, c in enumerate(splitted_data):
-        if i == 0:
-           bus_latent = model.encoder(torch.tensor(c, device=device)).detach().cpu().numpy()
-        else:
-           bus_latent = np.concatenate((bus_latent, model.encoder(torch.tensor(c, device=device)).detach().cpu().numpy()), axis=0)
-
-    latents[bus] = bus_latent
-
-#%%
-with open("data/latent_with_just_pmu_AED.pkl", "wb") as pkl_handle:
-	pickle.dump(latents, pkl_handle)

@@ -5,6 +5,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss
 from models.AED.simpleAED import Encoder, Decoder, RecurrentAutoencoder
+from models.AED.simpleAED import EncoderFlex, DecoderFlex, RecurrentAEDFlex
+# from models.AED.simpleAED import EncoderFlex
 import copy
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
@@ -51,7 +53,7 @@ test_selector = np.setdiff1d(np.arange(num_examples), train_selector)
 train_sampler = SubsetRandomSampler(torch.from_numpy(train_selector))
 test_sampler = SubsetRandomSampler(torch.from_numpy(test_selector))
 
-b_size = 100
+b_size = 10
 
 train_dataloader = DataLoader(
     per_unit, sampler=train_sampler, batch_size=b_size, drop_last=False)
@@ -59,11 +61,12 @@ test_dataloader = DataLoader(
     per_unit, sampler=test_sampler, batch_size=b_size, drop_last=False)
 #%%
 #define and train a model and save
-latent_space_feature = 32
-model = RecurrentAutoencoder(seq_len, n_features, latent_space_feature)
-model.to(device)
+# latent_space_feature = 128
+[rnn1_dim, rnn2_dim, embedding_dim] = [128, 64, 32]
+# model = RecurrentAutoencoder(seq_len, n_features, latent_space_feature)
+model = RecurrentAEDFlex(seq_len, n_features, rnn1_dim, rnn2_dim, embedding_dim).to(device)
 model.float()
-
+#%%
 def train_model(model, train_dataset, val_dataset, n_epochs):
 
   optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -106,10 +109,10 @@ model, history = train_model(
   model,
   train_dataloader,
   test_dataloader,
-  n_epochs=100
+  n_epochs=20
 )
 #%%
-model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
+model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
 torch.save(model, model_path)
 #%%
 def show_detail(data, pmu, type):
@@ -139,7 +142,7 @@ def show_detail(data, pmu, type):
 #%%
 
 pmu = 1
-for ev in [23862*0 -1]:
+for ev in [0,50,100,200, 300, 400, 500]:
 # ev = 100
   data = per_unit[ev]
   data = torch.from_numpy(data).to(device).reshape(1, data.shape[0], data.shape[1])
@@ -158,7 +161,7 @@ for ev in [23862*0 -1]:
 #%%
 
 #load the trained model
-model_path = 'models/AED/806_824_836_846_with_complete_network'
+model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
 model = torch.load(model_path)
 model.eval()
 #%%
@@ -254,7 +257,8 @@ plt.show()
 ####################
 
 #load the trained model
-model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
+model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features'
+# model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
 model = torch.load(model_path)
 model.eval()
 
@@ -269,13 +273,36 @@ whole_data = np.load('data/whole_data_ss.pkl', allow_pickle=True)
 # ev_num = int(whole_data[800].shape[0])
 selected_latent = {}
 pmu_num = 0
+selected_pmus = [806, 824, 836, 846]
+feature_num = 9
+mva_base = 1  # mva
+kvll = 24.9
+base_voltage = (kvll) / np.sqrt(3)  # kv
+base_current = mva_base / (base_voltage)
+
 # for pmu in [806, 824, 836, 846]:#for 4 pmus
+# for pmu in whole_data:#for all buses which contains those 4 pmus
+#   pmu_num += 1
+#   selected_events = whole_data[pmu]
+#   selected_events = torch.from_numpy(selected_events).to(device)
+#   temp_latents = model.encoder(selected_events).cpu().detach().numpy()
+#   selected_latent[pmu] = temp_latents
+
+#for the situation if we dont want use encoder for non pmu buses
 for pmu in whole_data:#for all buses which contains those 4 pmus
-  pmu_num += 1
-  selected_events = whole_data[pmu]
-  selected_events = torch.from_numpy(selected_events).to(device)
-  temp_latents = model.encoder(selected_events).cpu().detach().numpy()
-  selected_latent[pmu] = temp_latents
+  if pmu in selected_pmus:
+    pmu_num += 1
+    selected_events = whole_data[pmu]
+    selected_events = torch.from_numpy(selected_events).to(device)
+    temp_latents = model.encoder(selected_events).cpu().detach().numpy()
+    selected_latent[pmu] = temp_latents
+  else:
+    pmu_num += 1
+    selected_events = whole_data[pmu]
+    selected_events = torch.from_numpy(selected_events).to(device)
+    temp_latents = model.encoder(selected_events).cpu().detach().numpy()
+    selected_latent[pmu] = temp_latents
+
 # all_data = torch.from_numpy(per_unit[random_events]).to(device)
 # get the latent variables
 # selected_latent = np.array(selected_latent)

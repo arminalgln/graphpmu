@@ -277,3 +277,109 @@ class LatentMu(torch.autograd.Function):
 # ls.backward()
 
 
+
+class EncoderFlex(nn.Module):
+  def __init__(self, seq_len, n_features, rnn1_dim, rnn2_dim, embedding_dim):
+    super(EncoderFlex, self).__init__()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    self.device = device
+    self.seq_len, self.n_features = seq_len, n_features
+    self.rnn1_dim = rnn1_dim
+    self.rnn2_dim = rnn2_dim
+    self.dense1_dim = rnn2_dim
+    self.embedding_dim = embedding_dim
+    self.rnn1 = nn.LSTM(
+      input_size=self.n_features,
+      hidden_size=self.rnn1_dim,
+      num_layers=1,
+      #dropout=0.4,
+      batch_first=True  # (batch, seq, feature) as output and (num_layers, batch, hidden_size) for h, c
+    )  # (batch, seq, feature)  for input if batch_first is true
+    self.rnn2 = nn.LSTM(
+      input_size=self.rnn1_dim,
+      hidden_size=self.dense1_dim,
+      num_layers=1,
+      #dropout=0.4,
+      batch_first=True
+    )
+    self.dense1 = nn.Linear(
+        in_features=self.dense1_dim,
+        out_features=self.embedding_dim
+    )
+    # self.batchnorm = nn.BatchNorm1d(self.embedding_dim)
+
+  def forward(self, x):
+    # x.to(self.device)
+    x = x.float()
+    x, (_, _) = self.rnn1(x)
+    x = F.leaky_relu(x)
+    _, (hidden_n, _) = self.rnn2(x)
+    h_size = hidden_n.shape
+    x = hidden_n.reshape(h_size[1], h_size[2])
+    x = F.leaky_relu(x)
+    x = self.dense1(x)
+    # x = self.batchnorm(x) #some models have this some not
+
+    return F.leaky_relu(x)
+
+
+class DecoderFlex(nn.Module):
+  def __init__(self, seq_len, n_features, rnn1_dim, rnn2_dim,  embedding_dim):
+      super(DecoderFlex, self).__init__()
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      self.device = device
+      self.seq_len, self.n_features = seq_len, n_features
+      self.rnn1_dim = rnn1_dim
+      self.rnn2_dim = rnn2_dim
+      self.dense1_dim = rnn1_dim * self.seq_len
+      self.embedding_dim = embedding_dim
+
+      self.dense1 = nn.Linear(
+          in_features=self.embedding_dim,
+          out_features=self.dense1_dim
+      )
+      self.rnn1 = nn.LSTM(
+          input_size=self.rnn1_dim,
+          hidden_size=self.rnn2_dim,
+          num_layers=1,
+          batch_first=True
+      )
+      self.rnn2 = nn.LSTM(
+          input_size=self.rnn2_dim,
+          hidden_size=self.n_features,
+          num_layers=1,
+          batch_first=True
+      )
+
+  def forward(self, x):
+      # x.to(self.device)
+      x = x.float()
+      x = self.dense1(x)
+      x = F.leaky_relu(x)
+      size = x.shape
+      # print(size)
+      x = x.reshape((size[0], self.seq_len, self.rnn1_dim))
+      # print(x.shape)
+      x, (_, _) = self.rnn1(x)
+      x = F.leaky_relu(x)
+      x, (_, _) = self.rnn2(x)
+      return F.leaky_relu(x)
+
+
+class RecurrentAEDFlex(nn.Module):
+  def __init__(self, seq_len, n_features, rnn1_dim, rnn2_dim, embedding_dim):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    self.device = device
+    super(RecurrentAEDFlex, self).__init__()
+    self.encoder = EncoderFlex(seq_len, n_features, rnn1_dim, rnn2_dim, embedding_dim).to(device)
+    self.encoder.float()
+    self.decoder = DecoderFlex(seq_len, n_features,  rnn2_dim, rnn1_dim, embedding_dim).to(device)
+    self.decoder.float()
+
+  def forward(self, x):
+    # x = x.to(self.device)
+    x = x.float()
+    x = self.encoder(x)
+    x = self.decoder(x)
+    return x
+

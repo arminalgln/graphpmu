@@ -126,7 +126,8 @@ class GraphPMULocalGlobal(nn.Module):
         self.device = device
         self.encoder = encoder(node_nums, in_feats, h1_feats, last_space_feature).to(device)
         # self.discriminator = discriminator(last_space_feature, D_h1, D_h2).to(device)#if simple encoder
-        self.discriminator = discriminator(2 * (last_space_feature + h1_feats), D_h1, D_h2).to(device)#if locglob encoder
+        # self.discriminator = discriminator(2 * (last_space_feature + h1_feats), D_h1, D_h2).to(device)#if locglob encoder
+        self.discriminator = discriminator(last_space_feature + h1_feats, D_h1, D_h2).to(device)#if locglob encoder
         self.init_emb()
 
     def init_emb(self):

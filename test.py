@@ -198,6 +198,7 @@ sigma = 0.01
 mu = 0.001
 batch_size = [20, 10, 5, 2]
 learning_rates = [0.01, 0.001]
+#%%
 for b_size in batch_size:
     for lr in learning_rates:
         print(b_size, lr)
@@ -308,3 +309,41 @@ with torch.no_grad():
         # loss = BCE(pred, target)
         print(get_accuracy(labels, pred))
 
+#%%
+disc = graphpmu.discriminator
+disc_optimizer = torch.optim.Adam(disc.parameters(), lr=lr)  # , weight_decay=1e-4
+# criteria = global_loss_
+criteria = local_global_loss_
+
+inp1 = torch.ones(100, 384, device=device)
+inp2 = torch.zeros(100, 384, device=device)
+out1 = torch.ones(100, 384, device=device)
+out2 = torch.zeros(100, 384, device=device)
+
+inputs = torch.cat((inp1,inp2))
+# inputs = inputs.reshape(inputs.shape[0], 1, inputs.shape[-1])
+outputs = torch.cat((out1,out1))
+
+pred = disc(inputs)
+
+posidx = torch.arange(0,100)
+negidx = torch.arange(100,200)
+#%%
+for i in range(100):
+    pred = disc(inputs)
+    loss1 = criteria(pred, posidx, negidx, measure1)
+    # loss2 = criteria(pred, labels, measure2)
+    # loss = alpha * loss1 + (1-alpha) * loss2
+    loss =  loss1
+    # loss = (1-alpha) * loss2
+    # print(loss)
+    disc_optimizer.zero_grad()
+    print(next(disc.parameters())[0][0])
+    loss.backward()
+    print(loss.item())
+    disc_optimizer.step()
+    print(next(disc.parameters())[0][0])
+
+
+pred = disc(inputs)
+print(pred)

@@ -155,6 +155,7 @@ model_path = 'models/AED/806_824_836_846_stacked'
 model = torch.load(model_path)
 model.eval()
 #%%
+labels = np.load('data/aug_labels_806_824_836_846.npy')
 labels = pd.DataFrame({'labels': labels})
 labels = labels['labels'].astype('category').cat.codes.to_numpy()
 #%%
@@ -162,7 +163,16 @@ all_data = torch.from_numpy(per_unit).to(device)
 # get the latent variables
 #%%
 selected_latent = model.encoder(all_data[train_selector[2387:3580]]).cpu().detach().numpy()
-selected_labels = labels[train_selector[2387:3580]]
+#%%
+pmus = [2, 8, 19, 23]
+selected_latents = []
+for g in pos_graphs:
+    selected_latents.append(torch.ravel(g.ndata['latent'][pmus]).detach().cpu().numpy())
+selected_latents = np.array(selected_latents)
+np.random.seed(0)
+# evs = np.random.randint(0,10000,1000)
+selected_latent = selected_latents
+selected_labels = labels
 #%%
 
 #clustering results based on different clustering models
@@ -188,9 +198,9 @@ def all_clustering_models(latent, labels, cluster_num):
   pred_labels = KMeans(n_clusters=cluster_num, random_state=0).fit_predict(latent)
   print('trian accuracy (ARS) for KMeans', metrics.adjusted_rand_score(labels, pred_labels))
 
-  from sklearn.cluster import SpectralClustering
-  pred_labels = SpectralClustering(n_clusters=cluster_num, assign_labels="discretize", random_state=0).fit_predict(latent)
-  print('trian accuracy (ARS) for SpectralClustering', metrics.adjusted_rand_score(labels, pred_labels))
+  # from sklearn.cluster import SpectralClustering
+  # pred_labels = SpectralClustering(n_clusters=cluster_num, assign_labels="discretize", random_state=0).fit_predict(latent)
+  # print('trian accuracy (ARS) for SpectralClustering', metrics.adjusted_rand_score(labels, pred_labels))
 
 
 
@@ -202,6 +212,8 @@ from sklearn.manifold import TSNE
 X_embedded = TSNE(n_components=2).fit_transform(selected_latent)
 from matplotlib.colors import ListedColormap
 #%%
+import matplotlib
+import matplotlib.pyplot as plt
 pad = 5
 xyticks_num = 10
 unique_labels = np.unique(selected_labels)
@@ -222,5 +234,5 @@ plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pa
 plt.grid()
 plt.legend(handles=scatter.legend_elements()[0], labels=unique_labels.tolist(),scatterpoints=10, fontsize=20)
 plt.tight_layout()
-plt.savefig('figures/tsne_stacked_AED_DEC.png', dpi=300)
+# plt.savefig('figures/tsne_stacked_AED_DEC.png', dpi=300)
 plt.show()
