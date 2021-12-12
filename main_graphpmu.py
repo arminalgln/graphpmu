@@ -14,7 +14,7 @@ from models.losses import global_loss_, local_global_loss_, get_positive_expecta
 import torch.nn as nn
 import pandas as pd
 
-
+#%%
 with open('data/positive_graphs_latent_with_just_pmu_AED.pkl', 'rb') as handle:
   pos_graphs = pickle.load(handle)
 

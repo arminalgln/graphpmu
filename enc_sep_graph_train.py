@@ -655,8 +655,8 @@ plt.show()
 
 
 #%%
-model_path = 'models/AED/806_824_836_846_separate'
-torch.save(model, model_path)
+# model_path = 'models/AED/806_824_836_846_separate'
+# torch.save(model, model_path)
 #%%
 def show_detail(data, pmu, type):
 

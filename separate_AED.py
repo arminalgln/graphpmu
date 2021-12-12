@@ -30,13 +30,13 @@ for f in per_unit:
   elif f in [824, 836, 846]:
     concat_data = np.concatenate((concat_data, per_unit[f]))
 print(concat_data.shape)
-#
+
 # for i in range(per_unit.shape[-1]):
 #   mx = np.max(per_unit[:, :, i], axis=1)
 #   # mn = np.min(per_unit[:, :, i], axis=1)
 #
 #   new_data.append((per_unit[:, :, i])/(mx[:, None]))
-
+#
 # new_data = np.array(new_data)
 # concat_data = np.swapaxes(concat_data, 0, 1)
 # per_unit = np.swapaxes(concat_data, 2, 1)
@@ -46,6 +46,7 @@ n_seq, seq_len, n_features = per_unit.shape
 
 num_examples = per_unit.shape[0]
 num_train = int(num_examples * 0.9)
+np.random.seed(0)
 train_selector = np.random.choice(num_examples, num_train, replace=False)
 test_selector = np.setdiff1d(np.arange(num_examples), train_selector)
 
@@ -112,15 +113,15 @@ model, history = train_model(
   n_epochs=20
 )
 #%%
-model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
-torch.save(model, model_path)
+# model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
+# torch.save(model, model_path)
 #%%
 def show_detail(data, pmu, type):
   fig, (ax0, ax1, ax2) = plt.subplots(nrows=3, constrained_layout=True)
   for k in range(3):
-    ax0.plot(data[5:,pmu * k])
-    ax1.plot(data[5:,pmu * k + 3])
-    ax2.plot(data[5:,pmu * k + 6])
+    ax0.plot(data[5:,pmu + k])
+    ax1.plot(data[5:,pmu + k + 3])
+    ax2.plot(data[5:,pmu + k + 6])
 
   ax0.set_xlabel('timesteps')
   ax0.set_ylabel('voltage magnitude')
@@ -140,9 +141,16 @@ def show_detail(data, pmu, type):
 
   return fig
 #%%
-
-pmu = 1
-for ev in [0,50,100,200, 300, 400, 500]:
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# #load the data
+# per_unit = np.load('data/whole_data_ss.pkl', allow_pickle=True)
+# labels = np.load('data/new_aug_labels_806_824_836_846.npy')
+# bus_data = pd.read_excel('data/ss.xlsx')
+# network = pd.read_excel('data/edges.xlsx')
+#%%
+[0,50,100,200, 300, 400, 500]
+pmu = 2
+for ev in [0]:
 # ev = 100
   data = per_unit[ev]
   data = torch.from_numpy(data).to(device).reshape(1, data.shape[0], data.shape[1])
@@ -152,24 +160,32 @@ for ev in [0,50,100,200, 300, 400, 500]:
 
   data = torch_to_numpy_cpu(data)
   pred = torch_to_numpy_cpu(pred)
-
-  fig1 = show_detail(data, pmu, 'real')
+  print('yes')
+  fig1 = show_detail(data, 0, 'real')
   plt.show()
-  fig2 = show_detail(pred, pmu, 'pred')
-  plt.show()
+  # fig2 = show_detail(pred, pmu, 'pred')
+  # plt.show()
 
 #%%
 
 #load the trained model
-model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
+# model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus'
+model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
 model = torch.load(model_path)
 model.eval()
+#%%
+a=torch.from_numpy(per_unit[23862*2+600]).to(device).reshape(1,125,9)
+b=model(a.reshape(1,125,9))
+show_detail(a.reshape(125,9).detach().cpu().numpy(),0,'real')
+plt.show()
+show_detail(b.reshape(125,9).detach().cpu().numpy(),0,'pred')
+plt.show()
 #%%
 labels = pd.DataFrame({'labels': labels})
 labels = labels['labels'].astype('category').cat.codes.to_numpy()
 np.random.seed(0)
 ev_num =  int(num_examples/4) #number of pmus = 4
-rand_event_num = 1000
+rand_event_num = 5000
 random_events = np.random.randint(0, ev_num, rand_event_num)
 
 whole_data = np.load('data/whole_data_ss.pkl', allow_pickle=True)
@@ -186,7 +202,7 @@ for pmu in whole_data:#for all buses which contains those 4 pmus
 # all_data = torch.from_numpy(per_unit[random_events]).to(device)
 # get the latent variables
 selected_latent = np.array(selected_latent)
-selected_latent = selected_latent.swapaxes(0, 1).reshape(rand_event_num, latent_space_feature * pmu_num)
+selected_latent = selected_latent.swapaxes(0, 1).reshape(rand_event_num, embedding_dim * pmu_num)
 # selected_latent = model.encoder(all_data).cpu().detach().numpy()
 selected_labels = labels[random_events]
 
@@ -203,20 +219,20 @@ def all_clustering_models(latent, labels, cluster_num):
   print('trian accuracy (ARS) for gmm', metrics.adjusted_rand_score(labels, pred_labels))
 
   #AgglomerativeClustering
-  pred_labels = AgglomerativeClustering(n_clusters=cluster_num).fit_predict(latent)
-  print('trian accuracy (ARS) for AgglomerativeClustering', metrics.adjusted_rand_score(labels, pred_labels))
+  # pred_labels = AgglomerativeClustering(n_clusters=cluster_num).fit_predict(latent)
+  # print('trian accuracy (ARS) for AgglomerativeClustering', metrics.adjusted_rand_score(labels, pred_labels))
 
-  from sklearn.cluster import DBSCAN
-  pred_labels = DBSCAN().fit_predict(latent)
-  print('trian accuracy (ARS) for DBSCAN', metrics.adjusted_rand_score(labels, pred_labels))
+  # from sklearn.cluster import DBSCAN
+  # pred_labels = DBSCAN().fit_predict(latent)
+  # print('trian accuracy (ARS) for DBSCAN', metrics.adjusted_rand_score(labels, pred_labels))
 
   from sklearn.cluster import KMeans
   pred_labels = KMeans(n_clusters=cluster_num, random_state=0).fit_predict(latent)
   print('trian accuracy (ARS) for KMeans', metrics.adjusted_rand_score(labels, pred_labels))
 
-  from sklearn.cluster import SpectralClustering
-  pred_labels = SpectralClustering(n_clusters=cluster_num, assign_labels="discretize", random_state=0).fit_predict(latent)
-  print('trian accuracy (ARS) for SpectralClustering', metrics.adjusted_rand_score(labels, pred_labels))
+  # from sklearn.cluster import SpectralClustering
+  # pred_labels = SpectralClustering(n_clusters=cluster_num, assign_labels="discretize", random_state=0).fit_predict(latent)
+  # print('trian accuracy (ARS) for SpectralClustering', metrics.adjusted_rand_score(labels, pred_labels))
 
 
 
@@ -313,3 +329,6 @@ for pmu in whole_data:#for all buses which contains those 4 pmus
 import pickle
 with open("data/whole_buses_latent.pkl", "wb") as pkl_handle:
 	pickle.dump(selected_latent, pkl_handle)
+    #%%
+# np.save('data/results/x_embed_AED', X_embedded)
+# np.save('data/results/selected_label_AED', selected_labels)
