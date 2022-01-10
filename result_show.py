@@ -18,7 +18,7 @@ Total_accuracy = {
     'GraphPMU(random)':[0.533,0.6505,0.6720,0.6892,0.698],
     'GraphPMU(fixed)':[0.492,0.532,0.581,0.589,0.603],
     'GraphPMU(just global with ss)':[0.585, 0.6812, 0.7191, 0.759, 0.764],
-    'Just PMU buses graph':[0.423,0.472,0.552,0.665,0.725]
+    'Just PMU buses graph':[0.423,0.472,0.552,0.665,0.725] 0.4879
 }
 
 markers = {
@@ -40,8 +40,8 @@ font_axis = {'family': 'serif',
         }
 matplotlib.rcParams['figure.figsize'] = 20, 12
 for mdl in Total_accuracy:
-    plt.scatter(number_if_pmus, Total_accuracy[mdl], marker=markers[mdl], s=120)
-    plt.plot(number_if_pmus, Total_accuracy[mdl])
+    plt.scatter(number_if_pmus, Total_accuracy[mdl], marker=markers[mdl], s=300)
+    plt.plot(number_if_pmus, Total_accuracy[mdl], linewidth=5.0)
 plt.legend(methods, loc='lower right', fontsize=15)
 plt.xlabel('Number of PMUs', fontdict=font_axis)
 plt.ylabel('ARI score', fontdict=font_axis)
@@ -49,9 +49,9 @@ plt.xlim([3.5, 12.5])
 plt.ylim([0.1, 0.85])
 plt.yticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8, 0.85], fontsize=16)
 plt.xticks([4, 6, 8, 10, 12], fontsize=16)
-plt.title('ARI score for all models with different number of available micro-PMUs', fontdict=font_title)
+# plt.title('ARI score for all models with different number of available micro-PMUs', fontdict=font_title)
 plt.grid()
-plt.savefig('paper/figures/ARI_all_methods.eps', format='eps')
+plt.savefig('paper/figures/ARI_all_methods.pdf', dpi=300)
 plt.show()
 
 #%%

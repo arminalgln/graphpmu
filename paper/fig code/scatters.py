@@ -23,7 +23,7 @@ with open('data/positive_graphs_latent_with_just_pmu_AED.pkl', 'rb') as handle:
 
 with open('data/negative_graphs_latent_with_just_pmu_AED.pkl', 'rb') as handle:
   neg_graphs = pickle.load(handle)
-#%%
+
 #initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # g_encoder = GraphEncoder
@@ -75,7 +75,7 @@ labels = np.load('data/new_aug_labels_806_824_836_846.npy')
 labels_cat = pd.DataFrame({'labels': labels})
 labels_cat = labels_cat['labels'].astype('category').cat.codes.to_numpy()
 lab_cat = np.unique(labels)
-
+#%%
 train_selector_partial = train_selector[0:5000]
 # train_selector_partial = train_selector[5000:10000]
 
@@ -183,23 +183,28 @@ all_clustering_models(X_embedded, selected_labels, cluster_num)
 # np.save('data/results/x_embed_GraphPMU_12_pmus', X_embedded)
 # np.save('data/results/labels__GraphPMU_12_pmus', selected_labels)
 #%%
-# X_embedded = np.load('data/results/x_embed_best.npy')#for graph pmu
+X_embedded = np.load('data/results/x_embed_best.npy')#for graph pmu
 # X_embedded = np.load('data/results/x_embed_global.npy')#for graph pmu just global
 # X_embedded = np.load('data/results/x_embed_AED.npy')#for AED
 # X_embedded = np.load('data/results/x_embed_AED_modified.npy')#for AED modified
 # X_embedded = np.load('data/results/x_embed_DEC.npy')#for DEC
 # selected_labels = np.load('data/results/labels_DEC.npy')#labels for DEC
-X_embedded = np.load('data/results/x_embed_GraphPMU_12_pmus.npy')#for DEC
-selected_labels = np.load('data/results/labels__GraphPMU_12_pmus.npy')#labels for DEC
+# X_embedded = np.load('data/results/x_embed_GraphPMU_12_pmus.npy')#for graph12
+# selected_labels = np.load('data/results/labels__GraphPMU_12_pmus.npy')#labels for graoh12
 #%%
 cluster_num = 9
 all_clustering_models(X_embedded, selected_labels, cluster_num)
 #%%
+# np.save('data/results/graph_labels.npy', selected_labels)
+selected_labels = np.load('data/results/graph_labels.npy')#labels for graoh
+X_embedded = np.load('data/results/x_embed_best.npy')#for graph pmu
+##graphpmu with local/global and annotation
+import matplotlib.patches as mpatches
 pad = 5
 xyticks_num = 10
-colors = {'capbank840': 'darkgreen', 'capbank848':'lime', 'faultAB862':'hotpink', 'faultABC816': 'crimson',
-       'faultC852':'gold', 'loada836':'cyan', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
-       'onephase858':'blueviolet'}
+colors = {'capbank840': 'cyan', 'capbank848':'lime', 'faultAB862':'blueviolet', 'faultABC816': 'crimson',
+       'faultC852':'gold', 'loada836':'darkgreen', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
+       'onephase858':'hotpink'}
 labels_figure_legend = {'capbank840': 'Cap Bank 840', 'capbank848': 'Cap Bank 848', 'faultAB862': 'Fault "AB" 862',
                         'faultABC816': 'Fault "ABC" 816',  'faultC852':'Fault "C" 852', 'loada836':'Load 836',
                         'motormed812': 'Motor Load 812', 'motorsmall828':'Small Motor Load 828',
@@ -228,9 +233,53 @@ ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 for ev in np.unique(selected_labels):
     ix = np.where(selected_labels == ev)
     ax.scatter(X_embedded[ix, 0], X_embedded[ix, 1], c = colors[lab_cat[ev]], label=labels_figure_legend[lab_cat[ev]],
-               s = 120, marker=markers[lab_cat[ev]])
+               s = 150, marker=markers[lab_cat[ev]])
 ax.legend(loc='upper left', fontsize=15)
-plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+
+ellipse = mpatches.Ellipse((37,-20), 57, 137,angle=0, facecolor='w', alpha=0.3, lw=5, edgecolor='k')
+ax.add_patch(ellipse)
+
+bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+t = ax.text(5, -70, "Area One", ha="center", va="center", rotation=25,
+            size=15,
+            bbox=bbox_props)
+
+bb = t.get_bbox_patch()
+bb.set_boxstyle("rarrow", pad=0.6)
+
+
+
+ax.annotate('', xy=(0, 112),  xycoords='data',
+            xytext=(0.82, 0.95), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+
+ax.annotate('', xy=(28, 98),  xycoords='data',
+            xytext=(0.81, 0.93), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+bbox_props = dict(boxstyle="Square", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+t = ax.text(45, 122, "Area Two", ha="center", va="center", rotation=0,
+            size=15,
+            bbox=bbox_props)
+bb = t.get_bbox_patch()
+bb.set_boxstyle("Square", pad=0.6)
+
+
+
+# bbox_props = dict(boxstyle="circle",fc="w", ec="k",alpha=0.2, lw=10)
+# t = ax.text(38, -40, "         ", ha="center", va="center", rotation=25,
+#             size=70,
+#             bbox=bbox_props)
+#
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("circle", pad=0.5)
+
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
 plt.xlabel('Feature 1', fontdict=font_axis)
 plt.ylabel('Feature 2', fontdict=font_axis)
 plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad - 15),np.floor(np.max(X_embedded[:, 0]) + pad)])
@@ -241,29 +290,476 @@ plt.style.use('default')
 matplotlib.rcParams['figure.figsize'] = 20, 12
 plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
 plt.grid( linestyle='-', linewidth=1)
-plt.savefig('paper/figures/tsne_GraphPMU_12_pmus.eps', format='eps')
+# plt.savefig('paper/figures/tsne_GraphPMU_annot.pdf', dpi=300)
 plt.show()
 #%%
+X_embedded = np.load('data/results/x_embed_global.npy')#for graph pmu just global
+
+#graphpmu with local/global and annotation
+import matplotlib.patches as mpatches
+pad = 5
+xyticks_num = 10
+colors = {'capbank840': 'cyan', 'capbank848':'lime', 'faultAB862':'blueviolet', 'faultABC816': 'crimson',
+       'faultC852':'gold', 'loada836':'darkgreen', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
+       'onephase858':'hotpink'}
+labels_figure_legend = {'capbank840': 'Cap Bank 840', 'capbank848': 'Cap Bank 848', 'faultAB862': 'Fault "AB" 862',
+                        'faultABC816': 'Fault "ABC" 816',  'faultC852':'Fault "C" 852', 'loada836':'Load 836',
+                        'motormed812': 'Motor Load 812', 'motorsmall828':'Small Motor Load 828',
+                        'onephase858':'One Phase Load 858'}
+markers = {
+        'capbank840': "o", 'capbank848':"v", 'faultAB862':"^", 'faultABC816': "<",
+       'faultC852': ">", 'loada836': "s", 'motormed812':"P", 'motorsmall828':"*",
+       'onephase858':"X"
+}
+font_title = {'family': 'serif',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 24,
+        }
+font_axis = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 22,
+        }
+from matplotlib.ticker import MaxNLocator
+
+
+fig, ax = plt.subplots()
+plt.rcParams["font.weight"] = "bold"
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+for ev in np.unique(selected_labels):
+    ix = np.where(selected_labels == ev)
+    ax.scatter(X_embedded[ix, 0], X_embedded[ix, 1], c = colors[lab_cat[ev]], label=labels_figure_legend[lab_cat[ev]],
+               s = 150, marker=markers[lab_cat[ev]])
+ax.legend(loc='upper left', fontsize=15)
+
+ellipse = mpatches.Ellipse((55, 20), 75, 95,angle=0, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
+ellipse = mpatches.Ellipse((20, -35), 45, 110,angle=40, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
+
+ax.annotate('', xy=(-45, 65),  xycoords='data',
+            xytext=(0.15, 0.62), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+
+ax.annotate('', xy=(-64, 25),  xycoords='data',
+            xytext=(0.15, 0.62), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+bbox_props = dict(boxstyle="square", fc=(0.8, 0.9, 0.9), ec="k", alpha=0.3, lw=5)
+t = ax.text(-90, 30, "Area Two", ha="center", va="center", rotation=0,
+            size=14,
+            bbox=bbox_props)
+
+bb = t.get_bbox_patch()
+bb.set_boxstyle("square", pad=0.6)
+
+
+
+ax.annotate('', xy=(72, -20),  xycoords='data',
+            xytext=(0.9, 0.13), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+
+ax.annotate('', xy=(57, -50),  xycoords='data',
+            xytext=(0.9, 0.14), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+bbox_props = dict(boxstyle="Square", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+t = ax.text(75, -63, "Area One", ha="center", va="center", rotation=0,
+            size=15,
+            bbox=bbox_props)
+bb = t.get_bbox_patch()
+bb.set_boxstyle("Square", pad=0.6)
+
+
+
+# bbox_props = dict(boxstyle="circle",fc="w", ec="k",alpha=0.2, lw=10)
+# t = ax.text(38, -40, "         ", ha="center", va="center", rotation=25,
+#             size=70,
+#             bbox=bbox_props)
 #
-# pad = 5
-# xyticks_num = 10
-# unique_labels = np.unique(selected_labels)
-# clrs = ['r','g','b','c','m','y','k','orange','lime']
-# values = [unique_labels.tolist().index(i) for i in selected_labels]
-# plt.style.use('default')
-# matplotlib.rcParams['figure.figsize'] = 20, 12
-# # colors = ListedColormap(['r','b','g'])
-# scatter = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=values, s=100, cmap='tab10')
-# plt.title('TSNE for the embeddings after graph learning')
-# plt.xlabel('Feature 1')
-# plt.ylabel('Feature 2')
-# plt.xlim([np.min(X_embedded[:, 0])-pad,np.max(X_embedded[:, 0]) + pad])
-# plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad])
-# plt.xticks(np.arange(np.min(X_embedded[:, 0])-pad, np.max(X_embedded[:, 0]) + pad, 5))
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("circle", pad=0.5)
+
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+plt.xlabel('Feature 1', fontdict=font_axis)
+plt.ylabel('Feature 2', fontdict=font_axis)
+plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad - 20),np.floor(np.max(X_embedded[:, 0]) + pad)])
+plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad + 20])
+plt.xticks(np.arange(np.ceil(np.min(X_embedded[:, 0])-pad - 20), np.ceil(np.max(X_embedded[:, 0]) + pad +2)
+                     , 20), fontsize=16)
+plt.style.use('default')
+matplotlib.rcParams['figure.figsize'] = 20, 12
+plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
+plt.grid( linestyle='-', linewidth=1)
+plt.savefig('paper/figures/tsne_GraphPMU_global_annot.pdf', dpi=300)
+plt.show()
+#%%
+# X_embedded = np.load('data/results/x_embed_AED.npy')#for AED
+X_embedded = np.load('data/results/x_embed_AED_modified.npy')#for AED modified
+selected_labels = np.load('data/results/selected_label_AED.npy')#labels for AEC
+
+#AED
+import matplotlib.patches as mpatches
+pad = 5
+xyticks_num = 10
+colors = {'capbank840': 'cyan', 'capbank848':'lime', 'faultAB862':'blueviolet', 'faultABC816': 'crimson',
+       'faultC852':'gold', 'loada836':'darkgreen', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
+       'onephase858':'hotpink'}
+labels_figure_legend = {'capbank840': 'Cap Bank 840', 'capbank848': 'Cap Bank 848', 'faultAB862': 'Fault "AB" 862',
+                        'faultABC816': 'Fault "ABC" 816',  'faultC852':'Fault "C" 852', 'loada836':'Load 836',
+                        'motormed812': 'Motor Load 812', 'motorsmall828':'Small Motor Load 828',
+                        'onephase858':'One Phase Load 858'}
+markers = {
+        'capbank840': "o", 'capbank848':"v", 'faultAB862':"^", 'faultABC816': "<",
+       'faultC852': ">", 'loada836': "s", 'motormed812':"P", 'motorsmall828':"*",
+       'onephase858':"X"
+}
+font_title = {'family': 'serif',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 24,
+        }
+font_axis = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 22,
+        }
+from matplotlib.ticker import MaxNLocator
+
+
+fig, ax = plt.subplots()
+plt.rcParams["font.weight"] = "bold"
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+for ev in np.unique(selected_labels):
+    ix = np.where(selected_labels == ev)
+    ax.scatter(X_embedded[ix, 0], X_embedded[ix, 1], c = colors[lab_cat[ev]], label=labels_figure_legend[lab_cat[ev]],
+               s = 150, marker=markers[lab_cat[ev]])
+ax.legend(loc='upper left', fontsize=15)
+
+ellipse = mpatches.Ellipse((0, 30), 60, 40,angle=-50, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
+ellipse = mpatches.Ellipse((-30, -50), 70, 150,angle=55, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
 #
-# plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 5))
-# plt.grid()
-# plt.legend(handles=scatter.legend_elements()[0], labels=unique_labels.tolist(),scatterpoints=10, fontsize=20)
-# plt.tight_layout()
-# # plt.savefig('figures/tsne_after_graph.png', dpi=300)
-# plt.show()
+# ax.annotate('', xy=(-45, 65),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+#
+# ax.annotate('', xy=(-64, 25),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+
+bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="k", alpha=0.3, lw=5)
+t = ax.text(-90, 10, "Area Two", ha="center", va="center", rotation=-20,
+            size=14,
+            bbox=bbox_props)
+
+bb = t.get_bbox_patch()
+bb.set_boxstyle("rarrow", pad=0.6)
+
+
+
+# ax.annotate('', xy=(72, -20),  xycoords='data',
+#             xytext=(0.9, 0.13), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+#
+# ax.annotate('', xy=(57, -50),  xycoords='data',
+#             xytext=(0.9, 0.14), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+
+bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+t = ax.text(-30, 60, "Area One", ha="center", va="center", rotation=-20,
+            size=15,
+            bbox=bbox_props)
+bb = t.get_bbox_patch()
+bb.set_boxstyle("rarrow", pad=0.6)
+
+
+
+# bbox_props = dict(boxstyle="circle",fc="w", ec="k",alpha=0.2, lw=10)
+# t = ax.text(38, -40, "         ", ha="center", va="center", rotation=25,
+#             size=70,
+#             bbox=bbox_props)
+#
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("circle", pad=0.5)
+
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+plt.xlabel('Feature 1', fontdict=font_axis)
+plt.ylabel('Feature 2', fontdict=font_axis)
+plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad - 20),np.floor(np.max(X_embedded[:, 0]) + pad)])
+plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad + 20])
+plt.xticks(np.arange(np.ceil(np.min(X_embedded[:, 0])-pad - 20), np.ceil(np.max(X_embedded[:, 0]) + pad +10)
+                     , 20), fontsize=16)
+plt.style.use('default')
+matplotlib.rcParams['figure.figsize'] = 20, 12
+plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
+plt.grid( linestyle='-', linewidth=1)
+plt.savefig('paper/figures/tsne_AED_annot.pdf', dpi=300)
+plt.show()
+#%%
+X_embedded = np.load('data/results/x_embed_DEC.npy')#for DEC
+selected_labels = np.load('data/results/labels_DEC.npy')#labels for DEC
+
+#AED
+import matplotlib.patches as mpatches
+pad = 5
+xyticks_num = 10
+colors = {'capbank840': 'cyan', 'capbank848':'lime', 'faultAB862':'blueviolet', 'faultABC816': 'crimson',
+       'faultC852':'gold', 'loada836':'darkgreen', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
+       'onephase858':'hotpink'}
+labels_figure_legend = {'capbank840': 'Cap Bank 840', 'capbank848': 'Cap Bank 848', 'faultAB862': 'Fault "AB" 862',
+                        'faultABC816': 'Fault "ABC" 816',  'faultC852':'Fault "C" 852', 'loada836':'Load 836',
+                        'motormed812': 'Motor Load 812', 'motorsmall828':'Small Motor Load 828',
+                        'onephase858':'One Phase Load 858'}
+markers = {
+        'capbank840': "o", 'capbank848':"v", 'faultAB862':"^", 'faultABC816': "<",
+       'faultC852': ">", 'loada836': "s", 'motormed812':"P", 'motorsmall828':"*",
+       'onephase858':"X"
+}
+font_title = {'family': 'serif',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 24,
+        }
+font_axis = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 22,
+        }
+from matplotlib.ticker import MaxNLocator
+
+
+fig, ax = plt.subplots()
+plt.rcParams["font.weight"] = "bold"
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+for ev in np.unique(selected_labels):
+    ix = np.where(selected_labels == ev)
+    ax.scatter(X_embedded[ix, 0], X_embedded[ix, 1], c = colors[lab_cat[ev]], label=labels_figure_legend[lab_cat[ev]],
+               s = 150, marker=markers[lab_cat[ev]])
+ax.legend(loc='upper left', fontsize=15)
+
+ellipse = mpatches.Ellipse((60, 43), 25, 30,angle=0, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
+ellipse = mpatches.Ellipse((-16, -13), 115, 67,angle=0, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+
+#
+# ax.annotate('', xy=(-45, 65),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+#
+# ax.annotate('', xy=(-64, 25),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+
+bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="k", alpha=0.3, lw=5)
+t = ax.text(-82, -5, "Area Two", ha="center", va="center", rotation=0,
+            size=14,
+            bbox=bbox_props)
+
+bb = t.get_bbox_patch()
+bb.set_boxstyle("rarrow", pad=0.6)
+
+
+
+ax.annotate('', xy=(65, 35),  xycoords='data',
+            xytext=(0.9, 0.11), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+
+ax.annotate('', xy=(45, -65),  xycoords='data',
+            xytext=(0.86, 0.11), textcoords='axes fraction',
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            horizontalalignment='right', verticalalignment='top',
+            )
+
+bbox_props = dict(boxstyle="square", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+t = ax.text(78, -65, "Area One", ha="center", va="center", rotation=0,
+            size=15,
+            bbox=bbox_props)
+bb = t.get_bbox_patch()
+bb.set_boxstyle("square", pad=0.6)
+
+ellipse = mpatches.Ellipse((29, -67), 37, 32,angle=10, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+ax.add_patch(ellipse)
+
+# bbox_props = dict(boxstyle="circle",fc="w", ec="k",alpha=0.2, lw=10)
+# t = ax.text(38, -40, "         ", ha="center", va="center", rotation=25,
+#             size=70,
+#             bbox=bbox_props)
+#
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("circle", pad=0.5)
+
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+plt.xlabel('Feature 1', fontdict=font_axis)
+plt.ylabel('Feature 2', fontdict=font_axis)
+plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad - 20),np.floor(np.max(X_embedded[:, 0]) + pad)])
+plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad + 20])
+plt.xticks(np.arange(np.ceil(np.min(X_embedded[:, 0])-pad - 20), np.ceil(np.max(X_embedded[:, 0]) + pad +10)
+                     , 20), fontsize=16)
+plt.style.use('default')
+matplotlib.rcParams['figure.figsize'] = 20, 12
+plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
+plt.grid( linestyle='-', linewidth=1)
+plt.savefig('paper/figures/tsne_DEC_annot.pdf', dpi=300)
+plt.show()
+
+#%%
+X_embedded = np.load('data/results/x_embed_GraphPMU_12_pmus.npy')#for graph12
+selected_labels = np.load('data/results/labels__GraphPMU_12_pmus.npy')#labels for graoh12
+
+#AED
+import matplotlib.patches as mpatches
+pad = 5
+xyticks_num = 10
+colors = {'capbank840': 'cyan', 'capbank848':'lime', 'faultAB862':'blueviolet', 'faultABC816': 'crimson',
+       'faultC852':'gold', 'loada836':'darkgreen', 'motormed812':'dodgerblue', 'motorsmall828':'navy',
+       'onephase858':'hotpink'}
+labels_figure_legend = {'capbank840': 'Cap Bank 840', 'capbank848': 'Cap Bank 848', 'faultAB862': 'Fault "AB" 862',
+                        'faultABC816': 'Fault "ABC" 816',  'faultC852':'Fault "C" 852', 'loada836':'Load 836',
+                        'motormed812': 'Motor Load 812', 'motorsmall828':'Small Motor Load 828',
+                        'onephase858':'One Phase Load 858'}
+markers = {
+        'capbank840': "o", 'capbank848':"v", 'faultAB862':"^", 'faultABC816': "<",
+       'faultC852': ">", 'loada836': "s", 'motormed812':"P", 'motorsmall828':"*",
+       'onephase858':"X"
+}
+font_title = {'family': 'serif',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 24,
+        }
+font_axis = {'family': 'serif',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 22,
+        }
+from matplotlib.ticker import MaxNLocator
+
+
+fig, ax = plt.subplots()
+plt.rcParams["font.weight"] = "bold"
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+for ev in np.unique(selected_labels):
+    ix = np.where(selected_labels == ev)
+    ax.scatter(X_embedded[ix, 0], X_embedded[ix, 1], c = colors[lab_cat[ev]], label=labels_figure_legend[lab_cat[ev]],
+               s = 150, marker=markers[lab_cat[ev]])
+ax.legend(loc='upper left', fontsize=15)
+
+# ellipse = mpatches.Ellipse((60, 43), 25, 30,angle=0, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+# ax.add_patch(ellipse)
+#
+#
+# ellipse = mpatches.Ellipse((-16, -13), 115, 67,angle=0, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+# ax.add_patch(ellipse)
+
+
+#
+# ax.annotate('', xy=(-45, 65),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+#
+# ax.annotate('', xy=(-64, 25),  xycoords='data',
+#             xytext=(0.15, 0.62), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+
+# bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="k", alpha=0.3, lw=5)
+# t = ax.text(-82, -5, "Area Two", ha="center", va="center", rotation=0,
+#             size=14,
+#             bbox=bbox_props)
+#
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("rarrow", pad=0.6)
+
+
+
+# ax.annotate('', xy=(65, 35),  xycoords='data',
+#             xytext=(0.9, 0.11), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+#
+# ax.annotate('', xy=(45, -65),  xycoords='data',
+#             xytext=(0.86, 0.11), textcoords='axes fraction',
+#             arrowprops=dict(facecolor='black', shrink=0.05),
+#             horizontalalignment='right', verticalalignment='top',
+#             )
+#
+# bbox_props = dict(boxstyle="square", fc=(0.8, 0.9, 0.9), ec="k",alpha=0.3, lw=5)
+# t = ax.text(78, -65, "Area One", ha="center", va="center", rotation=0,
+#             size=15,
+#             bbox=bbox_props)
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("square", pad=0.6)
+
+# ellipse = mpatches.Ellipse((29, -67), 37, 32,angle=10, facecolor='w', alpha=0.3, lw=5,edgecolor='k')
+# ax.add_patch(ellipse)
+
+# bbox_props = dict(boxstyle="circle",fc="w", ec="k",alpha=0.2, lw=10)
+# t = ax.text(38, -40, "         ", ha="center", va="center", rotation=25,
+#             size=70,
+#             bbox=bbox_props)
+#
+# bb = t.get_bbox_patch()
+# bb.set_boxstyle("circle", pad=0.5)
+
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+plt.xlabel('Feature 1', fontdict=font_axis)
+plt.ylabel('Feature 2', fontdict=font_axis)
+plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad),np.floor(np.max(X_embedded[:, 0]) + pad -1)])
+plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad + 20])
+plt.xticks(np.arange(np.ceil(np.min(X_embedded[:, 0])-pad ), np.ceil(np.max(X_embedded[:, 0]) + pad +5)
+                     , 20), fontsize=16)
+plt.style.use('default')
+matplotlib.rcParams['figure.figsize'] = 20, 12
+plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
+plt.grid( linestyle='-', linewidth=1)
+plt.savefig('paper/figures/tsne_graph12pmu_annot.pdf', dpi=300)
+plt.show()

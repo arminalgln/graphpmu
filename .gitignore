@@ -130,6 +130,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+PSCAD_files/
 
 figures/
 data/

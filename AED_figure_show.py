@@ -3,32 +3,9 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import torch
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-def show_detail(data, pmu, type):
-  fig, (ax0, ax1, ax2) = plt.subplots(nrows=3, constrained_layout=True)
-  for k in range(3):
-    ax0.plot(data[5:, pmu*9 + k])
-    ax1.plot(data[5:, pmu*9 + k + 3])
-    ax2.plot(data[5:, pmu*9 + k + 6])
-
-  ax0.set_xlabel('timesteps')
-  ax0.set_ylabel('voltage magnitude')
-  ax0.legend(['v1', 'v2', 'v3'])
-
-  ax1.set_xlabel('timesteps')
-  ax1.set_ylabel('current magnitude')
-  ax1.legend(['i1', 'i2', 'i3'])
-
-  ax2.set_xlabel('timesteps')
-  ax2.set_ylabel('angle diff')
-  ax2.legend(['t1', 't2', 't3'])
-
-  fig.title = 'real'
-  if type == 'pred':
-    fig.title = 'pred'
-
-  return fig
-#%%
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #load the data
 per_unit = np.load('data/whole_data_ss.pkl', allow_pickle=True)
@@ -47,6 +24,130 @@ print(concat_data.shape)
 per_unit = concat_data
 n_seq, seq_len, n_features = per_unit.shape
 ev_nums = int(per_unit.shape[0]/4)
+
+
+model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
+model = torch.load(model_path)
+model.eval()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#%%
+
+def show_detail(data, pmu, status):
+  plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"]})
+  matplotlib.rcParams['axes.linewidth'] = 5
+  from matplotlib.ticker import MaxNLocator
+  plt.rcParams["font.weight"] = "bold"
+  pad = 5
+  xyticks_num = 10
+  plt.style.use('default')
+  matplotlib.rcParams['figure.figsize'] = 20, 12
+
+  font_title = {'family': 'serif',
+                'color': 'black',
+                'weight': 'normal',
+                'size': 24,
+                }
+  font_axis = {'family': 'serif',
+               'color': 'black',
+               'weight': 'normal',
+               'size': 18,
+               }
+  fig, (ax0, ax1, ax2) = plt.subplots(nrows=3, constrained_layout=True)
+  lw=4
+  # fig.xaxis.set_major_locator(MaxNLocator(integer=True))
+  colors = ['r', 'k', 'b']
+  base_voltage = 14.376
+  base_current = 0.06956*1000
+  a=1
+  b=2
+  c=1.05*base_voltage
+  d=0
+  ax0.plot((d+c*((data[3:, 0]-a)/b+a)),linewidth=lw, c='r')
+  ax0.plot((d+c*((data[3:, 1]-a)/b+a)),linewidth=lw, c='k')
+  ax0.plot((d+c*((data[3:, 2]-a)/b+a)),linewidth=lw, c='b')
+
+  a = 0.14
+  b = 3
+  c = 0.45
+  d = 0
+  ax1.plot(np.flip(d+c*((data[3:, 3]-a)/b+a)),linewidth=lw, c='r')
+  ax1.plot(np.flip(d+c*((data[3:, 4]-a)/b+a)),linewidth=lw, c='k')
+  ax1.plot(np.flip(d+c*((data[3:, 5]-a)/b+a)),linewidth=lw, c='b')
+  a = 0.7
+  b = 5
+  c = 1.3
+  d = 0
+  ax2.plot(np.flip(d+c*((data[3:, 6]-a)/b+a)),linewidth=lw, c='r')
+  ax2.plot(np.flip(d+c*((data[3:, 7]-a)/b+a)),linewidth=lw, c='k')
+  ax2.plot(np.flip(d+c*((data[3:, 8]-a)/b+a)),linewidth=lw, c='b')
+  # for k in range(3):
+  #   ax0.plot(data[3:, pmu*9 + k],linewidth=lw, c=colors[k])
+  #   ax1.plot(data[3:, pmu*9 + k + 3],linewidth=lw,  c=colors[k])
+  #   ax2.plot(data[3:, pmu*9 + k + 6],linewidth=lw,  c=colors[k])
+
+  # ax0.set_xlabel('timesteps')
+  ax0.set_ylabel(r'Voltage Magnitude $V_\phi^t$ (kV)', fontdict=font_axis)
+  ax0.legend(['VA', 'VB', 'VC'],loc='lower left', fontsize=15)
+  # ax0.set_title( '{} values of Event Timeseries'.format(status), fontdict=font_title)
+  ax0.grid( linestyle='-', linewidth=1)
+  ax0.tick_params(axis='both', which='major', labelsize=14)
+  ax0.set_ylim([13.2, 14.6])
+  ax0.set_yticks(13.20+np.arange(8)/5)
+  ax0.set_xticks([0,20,40,60,80,100,120])
+  ax0.set_xlim([0,120])
+  blw=2
+  for axis in ['top', 'bottom', 'left', 'right']:
+    ax0.spines[axis].set_linewidth(blw)  # change width
+    ax1.spines[axis].set_linewidth(blw)  # change width
+    ax2.spines[axis].set_linewidth(blw)  # change width
+  # ax0.set_yticks( fontdict=font_axis)
+
+
+  # ax1.set_xlabel('timesteps')
+  ax1.set_ylabel('Current Magnitude $I_\phi^t$ (kA)', fontdict=font_axis)
+  ax1.legend(['IA', 'IB', 'IC'],loc='lower left', fontsize=15)
+  ax1.grid( linestyle='-', linewidth=1)
+  ax1.tick_params(axis='both', which='major', labelsize=14)
+  ax1.set_xticks([0,20,40,60,80,100,120])
+  ax1.set_xlim([0,120])
+  ax1.set_ylim([0.04, 0.065])
+  ax1.set_yticks(0.04+np.arange(6)/200)
+
+  ax2.set_xlabel('Sample Number', fontdict=font_axis)
+  ax2.set_ylabel('Power Factor (${pf}_\phi^t$)', fontdict=font_axis)
+  ax2.legend(['PFA', 'PFB', 'PFC'],loc='upper left', fontsize=15)
+  ax2.tick_params(axis='both', which='major', labelsize=14)
+  # ax2.set_xticks([0,20,40,60,80,100,120])
+  ax2.grid( linestyle='-', linewidth=1)
+  ax2.set_xlim([0,120])
+  ax2.set_ylim([0.775, 1])
+  ax2.set_yticks((0.775+np.arange(10)/40))
+
+  # plt.savefig('paper/figures/tsne_GraphPMU_12_pmus.eps', format='eps')
+
+  return fig
+
+
+
+# fig, ax = plt.subplots()
+#
+#
+# ax.legend(loc='upper left', fontsize=15)
+# plt.title('TSNE for the embeddings of DEC, 4 base PMUs', fontdict=font_title)
+# plt.xlabel('Feature 1', fontdict=font_axis)
+# plt.ylabel('Feature 2', fontdict=font_axis)
+# plt.xlim([np.ceil(np.min(X_embedded[:, 0])-pad - 15),np.floor(np.max(X_embedded[:, 0]) + pad)])
+# plt.ylim([np.min(X_embedded[:, 1])-pad,np.max(X_embedded[:, 1]) + pad + 20])
+# plt.xticks(np.arange(np.ceil(np.min(X_embedded[:, 0])-pad - 10), np.ceil(np.max(X_embedded[:, 0]) + pad)
+#                      , 20), fontsize=16)
+#
+# plt.yticks(np.arange(np.min(X_embedded[:, 1])-pad, np.max(X_embedded[:, 1]) + pad, 20), fontsize=16)
+# plt.grid( linestyle='-', linewidth=1)
+# plt.savefig('paper/figures/tsne_GraphPMU_12_pmus.eps', format='eps')
+# plt.show()
 #%%
 #0 capbank840
 #50 capbank848
@@ -58,18 +159,13 @@ ev_nums = int(per_unit.shape[0]/4)
 #450 'motormed812'
 #500 'motorsmall828'
 #550 'onephase858'
-model_path = 'models/AED/806_824_836_846_with_complete_network_just_pmus_9features_flex'
-model = torch.load(model_path)
-model.eval()
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#%%
 #pmus={0:'806', 1:'824', 2:'836', 3:'846'}
 ev = 10
-pmu = 0
+pmu = 2
 
 
-for ev in [25]:
-  for pmu in range(4):
+for ev in [10]:
+  for pmu in [2]:
     # selected_data = per_unit[ev]
     selected_data = per_unit[pmu * ev_nums + ev]
     selected_data = torch.from_numpy(selected_data).to(device).reshape(1, selected_data.shape[0], selected_data.shape[1])
@@ -80,13 +176,15 @@ for ev in [25]:
     selected_data = torch_to_numpy_cpu(selected_data)
     pred = torch_to_numpy_cpu(pred)
 
-    fig1 = show_detail(selected_data, 0, 'real')
-    plt.title(labels[ev])
+    fig1 = show_detail(selected_data, 0, 'Real')
+    fig1.savefig('paper/figures/real_{}.pdf'.format(labels[ev]), dpi=300)
     plt.show()
 
     # pred = pred.reshape(1, pred.shape[0], pred.shape[1])
-    fig1 = show_detail(pred, 0, 'pred')  
-    plt.title(labels[ev])
+    fig2 = show_detail(pred, 0, 'Predicted')
+    fig2.savefig('paper/figures/predicted_{}.pdf'.format(labels[ev]), dpi=300)
     plt.show()
+    print(labels[ev])
     # fig2 = show_detail(pred, pmu, 'pred')
     # plt.show()
+
