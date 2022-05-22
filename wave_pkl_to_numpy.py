@@ -7,8 +7,9 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 #%%
 all_pmus = pd.read_csv('data/buses.csv')
 selected_pmus = ['806', '824', '836', '846']
-sample_numbers = 1000 #number of samples in each feature for each valid event
-
+# sample_numbers = 1000 #number of samples in each feature for each valid event
+# b = pd.read_pickle('data/buses.csv')
+# selected_pmus = list(b['bus'])
 def data_arrangement(path_to_events, selected_pmus):
 
     mva_base = 1 #mva
@@ -20,23 +21,34 @@ def data_arrangement(path_to_events, selected_pmus):
     given_keys = ['va', 'ia', 'vb', 'ib', 'vc', 'ic'] #'vam', 'vbm', 'vcm', 'vaph', 'vbph', 'vcph',
                   #'iam', 'ibm', 'icm', 'iaph', 'ibph', 'icph']  # for wave data
     desired_keys = []
+    data = pd.read_pickle(path_to_events)
+    print(data.keys())
+    all_keys = data[0].keys().values
+    print('this is all keys', all_keys)
+    new_pmus = set()
     for pmu in selected_pmus: # all desired pmu data
         for k in given_keys:
-            desired_keys.append(k+pmu)
+            if k+pmu in all_keys:
+                desired_keys.append(k+pmu)
+                new_pmus.add(pmu)
+
+    selected_pmus = new_pmus
     data = pd.read_pickle(path_to_events)
     data_arr = []
     per_unit_data_arr = []
     info_arr = {'event': path_to_events.split('/')[-1].split('_')[0], 'pmus': selected_pmus}
-    # print(info_arr)
-
+    print(info_arr)
+    print(desired_keys)
     for id in list(data.keys())[:-1]:
-        # print('here')
+        print('here')
+        print(id)
+        print(data[id].shape)
         temp_data = data[id][desired_keys].copy()
         if temp_data.shape[0] == sample_numbers:
             sorted_cols = []
             per_unit_data = {}
             for pmu in selected_pmus:
-                # print(pmu)
+                print(pmu)
                 v_keys = []
                 i_keys = []
 
@@ -62,7 +74,74 @@ def data_arrangement(path_to_events, selected_pmus):
     return np.stack(data_arr, axis=0), np.stack(per_unit_data_arr, axis=0), info_arr
 
 #%%
-# all_event_data = np.array([])
+all_pmus = pd.read_csv('data/buses.csv')
+selected_pmus = ['806', '824', '836', '846']
+sample_numbers = 1000 #number of samples in each feature for each valid event
+b = pd.read_csv('data/buses.csv')
+selected_pmus = list(b['bus'])
+selected_pmus = [str(i) for i in selected_pmus]
+all_event_data = np.array([])
+label = np.array([])
+first = True
+# all event ON gathering
+# os.mkdir('data/evs')
+for event in os.listdir('data/events'):
+    path_to_events = 'data/events/' + event
+    pte = 'data/evs/' + event
+    print(pte)
+    if not event in os.listdir('data/evs/'):
+        os.mkdir(pte)
+        print(pte)
+
+    label = np.array([])
+    print(event)
+    for filename in os.listdir(path_to_events):
+        print(filename)
+        if 'pkl' in filename.split('.'):
+            event_path = os.path.join(path_to_events, filename)
+            data, per_unit, info = data_arrangement(event_path, selected_pmus)
+            print(data.shape)
+            if first:
+                all_event_data = data
+                all_per_unit = per_unit
+                first = False
+                # break
+            else:
+                all_event_data = np.concatenate((all_event_data, data))
+                all_per_unit = np.concatenate((all_per_unit, per_unit))
+            label = np.concatenate((label, np.array([info['event'].split('\\')[0]] * data.shape[0])))
+    # np.save(pte + '/events_data.npy', all_event_data)
+
+    first = True
+# np.save('data/evs/features.npy', info['features'])
+#%%
+#%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+#%%
+all_event_data = np.array([])
 label = np.array([])
 first = True
 # all event ON gathering
@@ -78,6 +157,7 @@ for event in os.listdir('data/events'):
                 all_event_data = data
                 all_per_unit = per_unit
                 first = False
+                # break
             else:
                 all_event_data = np.concatenate((all_event_data, data))
                 all_per_unit = np.concatenate((all_per_unit, per_unit))
@@ -90,7 +170,7 @@ information = {'pmus':info['pmus'], 'features':info['features']}
 import pickle
 with open('data/wave/features.pickle', 'wb') as handle:
     pickle.dump(information, handle, protocol=pickle.HIGHEST_PROTOCOL)
-cd
+
 
 # np.save('data/features', info['features'])
 # np.save('data/wave/wave_labels' + ''.join(['_' + i for i in selected_pmus]), label)
@@ -169,3 +249,25 @@ np.save('data/wave/all_event_data', all_event_data)
 np.save('data/wave/all_per_unit', all_per_unit)
 
 #%%
+import os
+import w2p
+from w2p import WaveToHarmonics
+import numpy as np
+import pandas as pd
+import pickle
+
+events_name = os.listdir('data/evs')
+events_name = [i for i in events_name if os.path.isdir('data/evs/'+i)]
+
+os.mkdir('data/phasors')
+
+for ev in events_name:
+    pt = 'data/evs/'+ev+'/events_data.npy'
+    data = np.load(pt)
+
+    wtp = WaveToHarmonics()
+    all_h = wtp.transform(data, 0.001, 120, 60, [1, 3, 5])
+
+    os.mkdir('data/phasors/'+ev)
+    with open('data/phasors/'+ev+'/1_3_5harmonics_phasor.pkl', 'wb') as fp:
+        pickle.dump(all_h, fp, protocol=pickle.HIGHEST_PROTOCOL)

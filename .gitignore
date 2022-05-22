@@ -131,7 +131,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 PSCAD_files/
-
+paper/refs
 figures/
 data/
 reports/
